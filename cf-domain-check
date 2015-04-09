@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+#
+
+require "whois"
+require 'cloudflare'
+require 'yaml'
+
+$script = File.basename(__FILE__)
+config_file = "#{ENV['HOME']}/.cfcli.yml"
+
+def usage()
+	puts
+	puts "Run some useful checks against all domains in a cloudflare account"
+	puts "reads config from ~/.cfcli.yml"
+	exit
+end
+
+# get list of domains
+config = YAML.load_file(config_file)
+
+api_key = config['defaults']['token']
+email = config['defaults']['email']
+
+cf = CloudFlare::connection(api_key, email)
+
+c = Whois::Client.new
+
+# print header
+printf("%-30s  %8s  %-22s %s\n", "domain", "locked", "registrar", "nameservers")
+cf.zone_load_multi["response"]["zones"]["objs"].each { |record|
+	begin
+		domain = record["zone_name"]
+		r = c.lookup(domain)
+	rescue
+		puts "#{domain} lookup timeout"
+		next
+	end
+
+	if not r.registered?
+		puts "#{domain} not unregistered"
+		next
+	end
+
+	lock = r.content =~ /transfer ?prohibited/i ? "Locked":"Unlocked"
+
+	reg = r.registrar.nil? ? "*Unknown":r.registrar.name
+	ns = r.nameservers.first.name.split('.')[-2]
+	printf("%-30s  %8s  %-22s %s\n", domain, lock, reg, ns)
+}
