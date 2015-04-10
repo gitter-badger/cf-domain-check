@@ -11,5 +11,4 @@ Example conf file:
 defaults:
   token: <token>
   email: <cf account email>
-  domain: <default-cloudflare-domain>
 ```
