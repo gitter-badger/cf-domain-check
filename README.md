@@ -12,3 +12,5 @@ defaults:
   token: <token>
   email: <cf account email>
 ```
+
+To run from project directory: ```./cf-domain-check```
