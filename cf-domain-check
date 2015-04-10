@@ -26,7 +26,8 @@ cf = CloudFlare::connection(api_key, email)
 c = Whois::Client.new
 
 # print header
-printf("%-30s  %8s  %-22s %s\n", "domain", "locked", "registrar", "nameservers")
+print_format = "%-30s  %8s  %-22s %-14s %6s %-16s\n"
+printf(print_format, "domain", "locked", "registrar", "nameservers", "via cf", "A record")
 cf.zone_load_multi["response"]["zones"]["objs"].each { |record|
 	begin
 		domain = record["zone_name"]
@@ -35,6 +36,7 @@ cf.zone_load_multi["response"]["zones"]["objs"].each { |record|
 		puts "#{domain} lookup timeout"
 		next
 	end
+
 
 	if not r.registered?
 		puts "#{domain} not unregistered"
@@ -45,5 +47,16 @@ cf.zone_load_multi["response"]["zones"]["objs"].each { |record|
 
 	reg = r.registrar.nil? ? "*Unknown":r.registrar.name
 	ns = r.nameservers.first.name.split('.')[-2]
-	printf("%-30s  %8s  %-22s %s\n", domain, lock, reg, ns)
+
+	via_cloudflare = "?"
+	ip = "?"
+	cf.rec_load_all(domain)["response"]["recs"]["objs"].each { |dns|
+		if dns["zone_name"] == domain && dns["type"] == "A"
+			via_cloudflare = dns["service_mode"]
+			ip = dns["content"]
+			break
+		end
+	}
+
+	printf(print_format, domain, lock, reg, ns, via_cloudflare, ip)
 }
