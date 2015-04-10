@@ -5,29 +5,20 @@ require "whois"
 require 'cloudflare'
 require 'yaml'
 
-$script = File.basename(__FILE__)
+
+# get credentials
 config_file = "#{ENV['HOME']}/.cfcli.yml"
-
-def usage()
-	puts
-	puts "Run some useful checks against all domains in a cloudflare account"
-	puts "reads config from ~/.cfcli.yml"
-	exit
-end
-
-# get list of domains
 config = YAML.load_file(config_file)
-
 api_key = config['defaults']['token']
 email = config['defaults']['email']
 
 cf = CloudFlare::connection(api_key, email)
-
 c = Whois::Client.new
 
 # print header
-print_format = "%-30s  %8s  %-22s %-14s %6s %-16s\n"
+print_format = "%-30s  %8s  %-22s %-14s %-7s %-16s\n"
 printf(print_format, "domain", "locked", "registrar", "nameservers", "via cf", "A record")
+
 cf.zone_load_multi["response"]["zones"]["objs"].each { |record|
 	begin
 		domain = record["zone_name"]
@@ -58,5 +49,5 @@ cf.zone_load_multi["response"]["zones"]["objs"].each { |record|
 		end
 	}
 
-	printf(print_format, domain, lock, reg, ns, via_cloudflare, ip)
+	printf(print_format, domain, lock, reg, ns, via_cloudflare=='1'?'on':'off', ip)
 }
